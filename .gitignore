@@ -15,6 +15,7 @@ app/.externalNativeBuild/
 app/.cxx/
 app/*.apk
 app/*.aab
+.idea/
 
 # --- OS / editor cruft ---
 .DS_Store
