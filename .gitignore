@@ -1,0 +1,21 @@
+# --- Node / server ---
+server/node_modules/
+server/.env
+server/npm-debug.log*
+server/dist/
+
+# --- Android / app ---
+app/*.iml
+app/.gradle/
+app/local.properties
+app/.idea/
+app/build/
+app/captures/
+app/.externalNativeBuild/
+app/.cxx/
+app/*.apk
+app/*.aab
+
+# --- OS / editor cruft ---
+.DS_Store
+*.log
