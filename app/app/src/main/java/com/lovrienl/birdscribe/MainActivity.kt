@@ -1,6 +1,9 @@
 package com.lovrienl.birdscribe
 
+import android.media.MediaRecorder
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,10 +21,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import android.media.MediaRecorder
-import android.media.MediaPlayer
-import android.util.Log
+import androidx.lifecycle.lifecycleScope
 import com.lovrienl.birdscribe.ui.theme.BirdScribeTheme
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 
 class MainActivity : ComponentActivity() {
     private var isRecording by mutableStateOf(false)
@@ -104,6 +109,7 @@ class MainActivity : ComponentActivity() {
                 val file = java.io.File(path)
                 Log.d("BirdScribe", "Recording saved: $path (${file.length()} bytes")
                 hasRecording = true
+                uploadRecording()
             }
         }
     }
@@ -123,6 +129,28 @@ class MainActivity : ComponentActivity() {
             }
         } catch (e: Exception) {
             Log.e("BirdScribe", "playRecording failed",e)
+        }
+    }
+
+    private fun uploadRecording() {
+        val path = audioFilePath ?: return
+        val file = java.io.File(path)
+
+        val requestBody = file.asRequestBody("audio/mp4".toMediaTypeOrNull())
+        val audioPart = MultipartBody.Part.createFormData("audio", file.name, requestBody)
+
+        lifecycleScope.launch {
+            try {
+                val response = ApiClient.service.transcribe(audioPart)
+                if (response.isSuccessful) {
+                    val transcript = response.body()?.transcript
+                    Log.d("BirdScribe", "Transcript: $transcript")
+                } else {
+                    Log.e("BirdScribe", "Upload failed: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("BirdScribe", "Upload error", e)
+            }
         }
     }
 }
