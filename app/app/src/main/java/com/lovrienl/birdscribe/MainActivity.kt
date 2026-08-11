@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -18,12 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import android.media.MediaRecorder
+import android.media.MediaPlayer
 import android.util.Log
 import com.lovrienl.birdscribe.ui.theme.BirdScribeTheme
 
 class MainActivity : ComponentActivity() {
     private var isRecording by mutableStateOf(false)
-
+    private var hasRecording by mutableStateOf(false)
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -37,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
     private var mediaRecorder: MediaRecorder? = null
     private var audioFilePath: String? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     RecordButton(
                         isRecording = isRecording,
+                        hasRecording = hasRecording,
                         modifier = Modifier.padding(innerPadding),
                         onStartRecording = {
                             requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
@@ -53,6 +57,9 @@ class MainActivity : ComponentActivity() {
                         onStopRecording = {
                             stopRecording()
                             isRecording = false
+                        },
+                        onPlayRecording = {
+                            playRecording()
                         }
                     )
                 }
@@ -60,6 +67,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
     private fun startRecording() {
         val fileName = "${externalCacheDir?.absolutePath}/birdscribe_${System.currentTimeMillis()}.m4a"
         audioFilePath = fileName
@@ -91,7 +103,26 @@ class MainActivity : ComponentActivity() {
             audioFilePath?.let { path ->
                 val file = java.io.File(path)
                 Log.d("BirdScribe", "Recording saved: $path (${file.length()} bytes")
+                hasRecording = true
             }
+        }
+    }
+
+    private fun playRecording() {
+        val path = audioFilePath ?: return
+
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(path)
+                prepare()
+                setOnCompletionListener {
+                    it.release()
+                    mediaPlayer = null
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            Log.e("BirdScribe", "playRecording failed",e)
         }
     }
 }
@@ -101,22 +132,31 @@ fun RecordButton(
     isRecording: Boolean,
     modifier: Modifier = Modifier,
     onStartRecording: () -> Unit,
-    onStopRecording: () -> Unit
+    onStopRecording: () -> Unit,
+    onPlayRecording: () -> Unit,
+    hasRecording: Boolean
 ) {
-    Button(
-        onClick = {
-            if (isRecording) {
-                onStopRecording()
-            } else {
-                onStartRecording()
+    Column(modifier = modifier) {
+        Button(
+            onClick = {
+                if (isRecording) {
+                    onStopRecording()
+                } else {
+                    onStartRecording()
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRecording) Color.Red else Color.Green
+            )
+        ) {
+            Text(text = if (isRecording) "Stop Recording" else "Start Recording")
+        }
+
+        if (hasRecording && !isRecording) {
+            Button(onClick = onPlayRecording) {
+                Text("Play Recording")
             }
-        },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isRecording) Color.Red else Color.Green
-        ),
-        modifier = modifier
-    ) {
-        Text(text = if (isRecording) "Stop Recording" else "Start Recording")
+        }
     }
 }
 
