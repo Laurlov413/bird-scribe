@@ -1,6 +1,5 @@
 package com.lovrienl.birdscribe
 
-import com.lovrienl.birdscribe.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -10,7 +9,7 @@ object ApiClient  {
     private const val BASE_URL = BuildConfig.API_BASE_URL
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
     }
 
     private val okHttpClient = OkHttpClient.Builder()
